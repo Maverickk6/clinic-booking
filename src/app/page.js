@@ -181,9 +181,6 @@ export default function Home() {
                 >
                   Reset slots
                 </button>
-                <div className="rounded-full border border-white/15 bg-white/5 px-3 py-2 text-sm text-slate-200">
-                  2.4k patient visits this month
-                </div>
               </div>
             </div>
 
