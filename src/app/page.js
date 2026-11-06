@@ -154,24 +154,67 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-10 text-slate-800">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e0f2fe_0%,#ecfeff_18%,#f8fafc_48%,#f1f5f9_100%)] px-4 py-10 text-slate-800">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex flex-col gap-4 rounded-3xl bg-gradient-to-r from-brand-600 to-sky-500 p-6 text-white shadow-soft md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-100">Clinic booking</p>
-            <h1 className="mt-2 text-3xl font-bold md:text-4xl">Book a care visit</h1>
-          </div>
-          <button
-            type="button"
-            onClick={seedData}
-            className="rounded-full border border-white/30 bg-white/10 px-4 py-2 font-medium text-white transition hover:bg-white/20"
-          >
-            Reset slots
-          </button>
-        </div>
+        <header className="mb-8 overflow-hidden rounded-[32px] border border-slate-800/40 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 text-white shadow-[0_30px_80px_-35px_rgba(14,116,144,0.8)]">
+          <div className="grid gap-6 p-6 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+            <div className="space-y-5">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.8)]" />
+                Premium care
+              </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.22em] text-cyan-200/80">Clinic booking</p>
+                <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-5xl">Book a care visit with confidence.</h1>
+              </div>
+
+              <p className="max-w-xl text-sm text-slate-300 md:text-base">
+                Faster scheduling, clearer patient records, and a more polished experience for every appointment.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={seedData}
+                  className="rounded-full bg-cyan-400 px-5 py-2.5 font-semibold text-slate-950 shadow-lg shadow-cyan-500/30 transition hover:-translate-y-0.5 hover:bg-cyan-300"
+                >
+                  Reset slots
+                </button>
+              </div>
+            </div>
+
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-6 rounded-full bg-cyan-500/20 blur-3xl" />
+              <div className="relative w-full max-w-md rounded-[30px] border border-white/10 bg-white/5 p-4 shadow-[0_25px_70px_-30px_rgba(34,211,238,0.6)] backdrop-blur-sm">
+                <svg viewBox="0 0 420 300" className="h-auto w-full" aria-label="Medical appointment illustration" role="img">
+                  <defs>
+                    <linearGradient id="panelGlow" x1="0%" x2="100%" y1="0%" y2="100%">
+                      <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.9" />
+                      <stop offset="50%" stopColor="#a5f3fc" stopOpacity="0.8" />
+                      <stop offset="100%" stopColor="#e0f2fe" stopOpacity="0.7" />
+                    </linearGradient>
+                  </defs>
+                  <rect x="26" y="24" width="368" height="248" rx="28" fill="rgba(15,23,42,0.55)" stroke="rgba(255,255,255,0.08)" />
+                  <circle cx="102" cy="96" r="42" fill="url(#panelGlow)" opacity="0.8" />
+                  <circle cx="298" cy="74" r="26" fill="rgba(56,189,248,0.28)" />
+                  <path d="M120 208c18-28 52-44 90-44s72 16 90 44" fill="none" stroke="rgba(103,232,249,0.8)" strokeWidth="10" strokeLinecap="round" />
+                  <rect x="170" y="104" width="82" height="82" rx="24" fill="#f8fafc" opacity="0.96" />
+                  <path d="M206 126v35m-18-18h36" stroke="#0f172a" strokeWidth="8" strokeLinecap="round" />
+                  <path d="M82 190h78" stroke="rgba(255,255,255,0.6)" strokeWidth="10" strokeLinecap="round" />
+                  <path d="M258 190h78" stroke="rgba(255,255,255,0.6)" strokeWidth="10" strokeLinecap="round" />
+                  <rect x="62" y="126" width="102" height="58" rx="18" fill="rgba(14,165,233,0.12)" stroke="rgba(103,232,249,0.38)" />
+                  <rect x="260" y="126" width="96" height="62" rx="18" fill="rgba(20,184,166,0.12)" stroke="rgba(45,212,191,0.35)" />
+                  <path d="M90 152h44M90 165h56" stroke="rgba(255,255,255,0.8)" strokeWidth="6" strokeLinecap="round" />
+                  <path d="M286 152h42M286 165h52" stroke="rgba(255,255,255,0.8)" strokeWidth="6" strokeLinecap="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <section className="rounded-[28px] border border-cyan-100 bg-white/90 p-6 shadow-[0_18px_45px_-22px_rgba(14,116,144,0.35)] backdrop-blur-sm transition duration-200 hover:-translate-y-1 hover:shadow-[0_25px_60px_-28px_rgba(14,116,144,0.45)]">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">Available appointments</h2>
@@ -189,9 +232,9 @@ export default function Home() {
                     type="button"
                     onClick={() => setForm((current) => ({ ...current, slot_id: slot.id }))}
                     disabled={!slot.available}
-                    className={`rounded-2xl border p-4 text-left transition ${
+                    className={`group rounded-2xl border p-4 text-left transition duration-200 ${
                       slot.available
-                        ? 'border-emerald-200 bg-emerald-50 hover:border-emerald-400 hover:bg-emerald-100'
+                        ? 'border-emerald-200 bg-emerald-50 hover:-translate-y-1 hover:border-emerald-400 hover:bg-emerald-100 hover:shadow-[0_16px_30px_-22px_rgba(16,185,129,0.7)]'
                         : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
                     }`}
                   >
@@ -216,7 +259,7 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
+          <section className="rounded-[28px] border border-cyan-100 bg-white/90 p-6 shadow-[0_18px_45px_-22px_rgba(14,116,144,0.35)] backdrop-blur-sm transition duration-200 hover:-translate-y-1 hover:shadow-[0_25px_60px_-28px_rgba(14,116,144,0.45)]">
             <h2 className="text-xl font-semibold text-slate-900">New booking</h2>
             <form onSubmit={handleBook} className="mt-5 space-y-4">
               <label className="block text-sm font-medium text-slate-700">
@@ -226,7 +269,7 @@ export default function Home() {
                   value={form.slot_id}
                   onChange={handleChange}
                   placeholder="s11"
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 outline-none ring-0 transition focus:border-brand-500 focus:bg-white"
+                  className="mt-1 w-full rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5 text-slate-800 outline-none transition focus:border-cyan-500 focus:bg-white"
                   required
                 />
               </label>
@@ -238,7 +281,7 @@ export default function Home() {
                   value={form.name}
                   onChange={handleChange}
                   placeholder="Ada Obi"
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 outline-none transition focus:border-brand-500 focus:bg-white"
+                  className="mt-1 w-full rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5 text-slate-800 outline-none transition focus:border-cyan-500 focus:bg-white"
                   required
                 />
               </label>
@@ -251,14 +294,14 @@ export default function Home() {
                   value={form.email}
                   onChange={handleChange}
                   placeholder="ada@example.com"
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 outline-none transition focus:border-brand-500 focus:bg-white"
+                  className="mt-1 w-full rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5 text-slate-800 outline-none transition focus:border-cyan-500 focus:bg-white"
                   required
                 />
               </label>
 
               <button
                 type="submit"
-                className="w-full rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-500"
+                className="w-full rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 px-4 py-3 font-semibold text-white shadow-lg shadow-cyan-300/40 transition duration-200 hover:-translate-y-0.5 hover:from-cyan-500 hover:to-teal-500"
               >
                 Book appointment
               </button>
@@ -282,7 +325,7 @@ export default function Home() {
           )}
         </div>
 
-        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
+        <section className="mt-8 rounded-[28px] border border-cyan-100 bg-white/90 p-6 shadow-[0_18px_45px_-22px_rgba(14,116,144,0.35)] backdrop-blur-sm transition duration-200 hover:-translate-y-1 hover:shadow-[0_25px_60px_-28px_rgba(14,116,144,0.45)]">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-slate-900">Your bookings</h2>
@@ -294,12 +337,12 @@ export default function Home() {
                 value={emailFilter}
                 onChange={(event) => setEmailFilter(event.target.value)}
                 placeholder="Search by email"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 outline-none transition focus:border-brand-500 focus:bg-white"
+                className="w-full rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5 text-slate-800 outline-none transition focus:border-cyan-500 focus:bg-white"
               />
               <button
                 type="button"
                 onClick={handleLookup}
-                className="rounded-xl bg-slate-900 px-4 py-2.5 font-medium text-white transition hover:bg-slate-700"
+                className="rounded-xl bg-slate-800 px-4 py-2.5 font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-slate-700"
               >
                 Search
               </button>
@@ -308,14 +351,14 @@ export default function Home() {
 
           <div className="mt-5 space-y-3">
             {myBookings.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-slate-500">
+              <p className="rounded-2xl border border-dashed border-cyan-100 bg-cyan-50/40 px-4 py-8 text-center text-slate-500">
                 No bookings yet.
               </p>
             ) : (
               myBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between"
+                  className="flex flex-col gap-3 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-50 md:flex-row md:items-center md:justify-between"
                 >
                   <div>
                     <p className="font-semibold text-slate-900">{booking.name}</p>
@@ -327,7 +370,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => cancelBooking(booking.id)}
-                      className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100"
+                      className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition duration-200 hover:-translate-y-0.5 hover:bg-rose-100"
                     >
                       Cancel
                     </button>
@@ -341,7 +384,7 @@ export default function Home() {
             <button
               type="button"
               onClick={handleLoadNextPage}
-              className="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+              className="mt-5 rounded-xl border border-cyan-100 bg-white px-4 py-2.5 font-medium text-slate-700 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-50"
             >
               Next page
             </button>
