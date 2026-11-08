@@ -154,15 +154,8 @@ export async function POST(request) {
       return;
     }
 
-    const existingConfirmed = await bookingRepo.count({
-      where: { slotId: normalized.slot_id, status: 'confirmed' },
-    });
-
-    if (existingConfirmed > 0) {
-      response = NextResponse.json({ error: 'slot already booked' }, { status: 409 });
-      return;
-    }
-
+    // Level 4: Idempotency check BEFORE conflict check so a retry always
+    // gets back the original booking regardless of current slot state.
     if (idempotencyKey) {
       const existingKey = await idempotencyRepo.findOne({ where: { key: idempotencyKey } });
       if (existingKey) {
@@ -175,6 +168,15 @@ export async function POST(request) {
         response = NextResponse.json(serializeBooking(original), { status: 201 });
         return;
       }
+    }
+
+    const existingConfirmed = await bookingRepo.count({
+      where: { slotId: normalized.slot_id, status: 'confirmed' },
+    });
+
+    if (existingConfirmed > 0) {
+      response = NextResponse.json({ error: 'slot already booked' }, { status: 409 });
+      return;
     }
 
     const insert = await bookingRepo.insert({

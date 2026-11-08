@@ -65,10 +65,60 @@ export const AttemptEntity = new EntitySchema({
   },
 });
 
-const databaseUrl =
-  process.env.POSTGRES_URL ||
-  process.env.DATABASE_URL ||
-  'postgres://postgres:postgres@localhost:5432/clinic_booking';
+const databaseUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error(
+    'No database URL configured. Set POSTGRES_URL or DATABASE_URL in your environment.'
+  );
+}
+
+const shouldUseSsl =
+  process.env.POSTGRES_SSL === 'true' || /sslmode=require/i.test(databaseUrl || '');
+
+export function createSeedSlots(count = 12) {
+  const providers = ['Dr Ade', 'Dr Moyo', 'Dr Smith', 'Dr Okafor'];
+  const start = new Date();
+  start.setHours(9, 0, 0, 0);
+
+  return Array.from({ length: count }, (_, index) => {
+    const provider = providers[index % providers.length];
+    const dayOffset = Math.floor(index / providers.length);
+    const hourOffset = (index % providers.length) * 2;
+    const slotStart = new Date(start.getTime() + dayOffset * 86400000 + hourOffset * 3600000);
+    const slotEnd = new Date(slotStart.getTime() + 30 * 60000);
+
+    return {
+      id: `seed-${index + 1}`,
+      provider,
+      start: slotStart.toISOString(),
+      end: slotEnd.toISOString(),
+    };
+  });
+}
+
+export async function seedDatabase({ count = 12, dataSource = null } = {}) {
+  const ds = dataSource || (await getDb());
+  const slots = createSeedSlots(count);
+
+  await ds.transaction(async (manager) => {
+    await manager.getRepository(BookingEntity).clear();
+    await manager.getRepository(IdempotencyEntity).clear();
+    await manager.getRepository(AttemptEntity).clear();
+    await manager.getRepository(SlotEntity).clear();
+
+    await manager.getRepository(SlotEntity).insert(
+      slots.map((slot) => ({
+        id: String(slot.id || ''),
+        provider: String(slot.provider || ''),
+        start: new Date(slot.start),
+        end: new Date(slot.end),
+      }))
+    );
+  });
+
+  return slots;
+}
 
 let appDataSource = null;
 
@@ -80,18 +130,35 @@ export function getDataSource() {
       synchronize: true,
       logging: false,
       entities: [SlotEntity, BookingEntity, IdempotencyEntity, AttemptEntity],
-      ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
+      ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
     });
   }
 
   return appDataSource;
 }
 
+let partialIndexCreated = false;
+
 export async function getDb() {
   const ds = getDataSource();
 
   if (!ds.isInitialized) {
     await ds.initialize();
+  }
+
+  // Ensure partial unique index exists for concurrency-safe slot booking.
+  // TypeORM synchronize cannot create partial indexes, so we do it manually once.
+  if (!partialIndexCreated) {
+    partialIndexCreated = true;
+    try {
+      await ds.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS one_confirmed_per_slot
+        ON bookings (slot_id)
+        WHERE status = 'confirmed'
+      `);
+    } catch {
+      // Index may already exist under a different name — not fatal.
+    }
   }
 
   return ds;
