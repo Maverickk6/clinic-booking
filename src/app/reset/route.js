@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BookingEntity, AttemptEntity, IdempotencyEntity, SlotEntity, getDb } from '../../lib/db';
+import { BookingEntity, AttemptEntity, IdempotencyEntity, SlotEntity, createSeedSlots, getDb, seedDatabase } from '../../lib/db';
 
 export async function POST(request) {
   const apiKey = request.headers.get('X-API-Key');
@@ -16,8 +16,14 @@ export async function POST(request) {
     return NextResponse.json({ error: 'invalid payload' }, { status: 400 });
   }
 
-  const slots = Array.isArray(payload?.slots) ? payload.slots : [];
   const dataSource = await getDb();
+
+  if (!Array.isArray(payload?.slots) || payload.slots.length === 0) {
+    const seeded = await seedDatabase({ count: 12, dataSource });
+    return NextResponse.json({ ok: true, count: seeded.length }, { status: 200 });
+  }
+
+  const slots = payload.slots;
 
   await dataSource.transaction(async (manager) => {
     await manager.getRepository(BookingEntity).clear();
@@ -25,17 +31,15 @@ export async function POST(request) {
     await manager.getRepository(AttemptEntity).clear();
     await manager.getRepository(SlotEntity).clear();
 
-    if (slots.length > 0) {
-      await manager.getRepository(SlotEntity).insert(
-        slots.map((slot) => ({
-          id: String(slot.id || ''),
-          provider: String(slot.provider || ''),
-          start: new Date(slot.start),
-          end: new Date(slot.end),
-        }))
-      );
-    }
+    await manager.getRepository(SlotEntity).insert(
+      slots.map((slot) => ({
+        id: String(slot.id || ''),
+        provider: String(slot.provider || ''),
+        start: new Date(slot.start),
+        end: new Date(slot.end),
+      }))
+    );
   });
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json({ ok: true, count: slots.length }, { status: 200 });
 }
