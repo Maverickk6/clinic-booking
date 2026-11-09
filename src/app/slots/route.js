@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
 import { BookingEntity, SlotEntity, getDb } from '../../lib/db';
 
-const getApiKey = (request) => request.headers.get('X-API-Key');
+const expectedKey = process.env.CLINIC_API_KEY || 'demo-key-123';
 
-export async function GET(request) {
-  const apiKey = getApiKey(request);
-  const expectedKey = process.env.CLINIC_API_KEY || 'demo-key-123';
-
+function rejectUnauthorized(request) {
+  const apiKey = request.headers.get('X-API-Key');
   if (!apiKey || apiKey !== expectedKey) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
+  return null;
+}
+
+export async function GET(request) {
+  const denied = rejectUnauthorized(request);
+  if (denied) return denied;
 
   const { searchParams } = new URL(request.url);
   const provider = searchParams.get('provider');

@@ -22,13 +22,24 @@ function serializeBooking(booking) {
   };
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function GET(request, { params }) {
   const denied = rejectUnauthorized(request);
   if (denied) return denied;
 
   const { id } = await params;
+  if (!id || !UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: 'booking not found' }, { status: 404 });
+  }
+
   const dataSource = await getDb();
-  const booking = await dataSource.getRepository(BookingEntity).findOneBy({ id });
+  let booking;
+  try {
+    booking = await dataSource.getRepository(BookingEntity).findOneBy({ id });
+  } catch {
+    return NextResponse.json({ error: 'booking not found' }, { status: 404 });
+  }
 
   if (!booking) {
     return NextResponse.json({ error: 'booking not found' }, { status: 404 });
@@ -42,10 +53,20 @@ export async function DELETE(request, { params }) {
   if (denied) return denied;
 
   const { id } = await params;
+  if (!id || !UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: 'booking not found' }, { status: 404 });
+  }
+
   const dataSource = await getDb();
   const bookingRepo = dataSource.getRepository(BookingEntity);
 
-  const booking = await bookingRepo.findOneBy({ id });
+  let booking;
+  try {
+    booking = await bookingRepo.findOneBy({ id });
+  } catch {
+    return NextResponse.json({ error: 'booking not found' }, { status: 404 });
+  }
+
   if (!booking) {
     return NextResponse.json({ error: 'booking not found' }, { status: 404 });
   }

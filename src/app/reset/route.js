@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BookingEntity, AttemptEntity, IdempotencyEntity, SlotEntity, createSeedSlots, getDb, seedDatabase } from '../../lib/db';
+import { BookingEntity, AttemptEntity, IdempotencyEntity, SlotEntity, getDb, seedDatabase } from '../../lib/db';
 
 export async function POST(request) {
   const apiKey = request.headers.get('X-API-Key');
