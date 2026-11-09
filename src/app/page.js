@@ -125,7 +125,7 @@ export default function Home() {
     setError('');
     setResult(null);
 
-    if (!form.slot_id) {
+    if (!selectedSlot) {
       setError('Please select an available appointment slot first.');
       return;
     }
@@ -327,7 +327,7 @@ export default function Home() {
 
               <button
                 type="submit"
-                disabled={!form.slot_id}
+                disabled={!selectedSlot}
                 className="w-full rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 px-4 py-3 font-semibold text-white shadow-lg shadow-cyan-300/40 transition duration-200 hover:-translate-y-0.5 hover:from-cyan-500 hover:to-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Book appointment
