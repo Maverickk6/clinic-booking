@@ -103,6 +103,7 @@ All endpoints require the `X-API-Key` header (Level 2). Missing or invalid keys 
 | `POSTGRES_URL` | Supabase PostgreSQL connection string (pooler) |
 | `DATABASE_URL` | Fallback connection string (same as POSTGRES_URL) |
 | `POSTGRES_SSL` | Set to `true` for Supabase SSL connection |
+| `POSTGRES_SSL_REJECT_UNAUTHORIZED` | Optional override. Set to `false` for Supabase pooler/self-signed cert chains, `true` for strict CA verification |
 
 ---
 

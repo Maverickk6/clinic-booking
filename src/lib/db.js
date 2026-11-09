@@ -200,13 +200,19 @@ export function getDataSource() {
       process.env.POSTGRES_SSL === 'true' ||
       /sslmode=(require|verify-ca|verify-full)/i.test(databaseUrl || '');
 
-    // Safely remove sslmode query param so TypeORM's ssl options take precedence
+    // Safely remove sslmode query param so TypeORM's ssl options take precedence.
+    // For Supabase poolers and self-signed chain certificates we default to allowing
+    // the certificate chain without strict CA validation unless a custom CA is provided.
     const cleanUrl = getCleanDatabaseUrl(databaseUrl);
+    const rejectUnauthorized =
+      process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED === undefined
+        ? Boolean(process.env.POSTGRES_CA)
+        : process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED === 'true';
 
     let sslConfig = false;
     if (shouldUseSsl) {
       sslConfig = {
-        rejectUnauthorized: true,
+        rejectUnauthorized,
       };
 
       if (process.env.POSTGRES_CA) {
