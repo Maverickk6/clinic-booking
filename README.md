@@ -102,7 +102,9 @@ All endpoints require the `X-API-Key` header (Level 2). Missing or invalid keys 
 | `NEXT_PUBLIC_CLINIC_API_KEY` | Public key used by client-side web UI |
 | `POSTGRES_URL` | Supabase PostgreSQL connection string (pooler) |
 | `DATABASE_URL` | Fallback connection string (same as POSTGRES_URL) |
-| `POSTGRES_SSL` | Set to `true` for Supabase SSL connection |
+| `POSTGRES_SSL` | Set to `true` when using SSL for the Postgres connection |
+| `POSTGRES_CA` | Optional CA certificate bundle for custom/self-signed certificate chains. When unset, TLS verification is relaxed unless you explicitly set `POSTGRES_SSL_REJECT_UNAUTHORIZED` |
+| `POSTGRES_SSL_REJECT_UNAUTHORIZED` | Defaults to `true` only when `POSTGRES_CA` is set; otherwise it defaults to `false`. Setting this explicitly to `true` or `false` overrides the default behavior and controls Node's `rejectUnauthorized` setting for the database TLS connection |
 
 ---
 

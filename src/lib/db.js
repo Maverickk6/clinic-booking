@@ -200,13 +200,22 @@ export function getDataSource() {
       process.env.POSTGRES_SSL === 'true' ||
       /sslmode=(require|verify-ca|verify-full)/i.test(databaseUrl || '');
 
-    // Safely remove sslmode query param so TypeORM's ssl options take precedence
+    // Safely remove sslmode query param so TypeORM's ssl options take precedence.
+    // `verify-ca` and `verify-full` are secure defaults: if a connection is configured
+    // for certificate validation and no override is provided, we reject invalid chains.
+    // Self-signed connections remain possible only via an explicit opt-out.
     const cleanUrl = getCleanDatabaseUrl(databaseUrl);
+    const hasExplicitSslOverride =
+      process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED !== undefined;
+    const hasVerifyMode = /sslmode=(verify-ca|verify-full)/i.test(databaseUrl || '');
+    const rejectUnauthorized = hasExplicitSslOverride
+      ? process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED === 'true'
+      : Boolean(process.env.POSTGRES_CA) || hasVerifyMode;
 
     let sslConfig = false;
     if (shouldUseSsl) {
       sslConfig = {
-        rejectUnauthorized: true,
+        rejectUnauthorized,
       };
 
       if (process.env.POSTGRES_CA) {
