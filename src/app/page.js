@@ -130,12 +130,6 @@ export default function Home() {
       return;
     }
 
-    const validSlot = slots.some((slot) => slot.id === form.slot_id && slot.available);
-    if (!validSlot) {
-      setError('The selected slot is no longer available. Please choose another appointment.');
-      return;
-    }
-
     try {
       const booking = await apiFetch('/bookings', {
         method: 'POST',
