@@ -32,6 +32,14 @@ export const BookingEntity = new EntitySchema({
     status: { type: 'varchar', nullable: false, default: 'confirmed' },
     createdAt: { type: 'timestamptz', name: 'created_at', createDate: true },
   },
+  indices: [
+    {
+      name: 'one_confirmed_per_slot',
+      columns: ['slotId'],
+      unique: true,
+      where: "status = 'confirmed'",
+    },
+  ],
   relations: {
     slot: {
       type: 'many-to-one',
@@ -102,11 +110,39 @@ export function createSeedSlots(count = 12) {
  * @param {DataSource|null} [options.dataSource=null] - Optional existing DataSource instance.
  * @returns {Promise<Array<Object>>} The seeded slots.
  */
+export async function lockTablesInOrder(manager) {
+  await manager.getRepository(BookingEntity).find({
+    select: ['id'],
+    order: { id: 'ASC' },
+    lock: { mode: 'pessimistic_write' },
+  });
+
+  await manager.getRepository(IdempotencyEntity).find({
+    select: ['id'],
+    order: { id: 'ASC' },
+    lock: { mode: 'pessimistic_write' },
+  });
+
+  await manager.getRepository(AttemptEntity).find({
+    select: ['id'],
+    order: { id: 'ASC' },
+    lock: { mode: 'pessimistic_write' },
+  });
+
+  await manager.getRepository(SlotEntity).find({
+    select: ['id'],
+    order: { id: 'ASC' },
+    lock: { mode: 'pessimistic_write' },
+  });
+}
+
 export async function seedDatabase({ count = 12, dataSource = null } = {}) {
   const ds = dataSource || (await getDb());
   const slots = createSeedSlots(count);
 
   await ds.transaction(async (manager) => {
+    await lockTablesInOrder(manager);
+
     // Truncate BookingEntity and SlotEntity together in a single command to satisfy foreign keys
     await manager.query('TRUNCATE TABLE bookings, slots CASCADE');
     await manager.getRepository(IdempotencyEntity).clear();
@@ -161,7 +197,8 @@ export function getDataSource() {
     }
 
     const shouldUseSsl =
-      process.env.POSTGRES_SSL === 'true' || /sslmode=require/i.test(databaseUrl || '');
+      process.env.POSTGRES_SSL === 'true' ||
+      /sslmode=(require|verify-ca|verify-full)/i.test(databaseUrl || '');
 
     // Safely remove sslmode query param so TypeORM's ssl options take precedence
     const cleanUrl = getCleanDatabaseUrl(databaseUrl);
@@ -209,6 +246,22 @@ async function ensurePartialIndex(ds) {
   if (!indexCreationPromise) {
     indexCreationPromise = (async () => {
       try {
+        await ds.query(`
+          WITH ranked AS (
+            SELECT id,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY slot_id
+                     ORDER BY created_at ASC, id ASC
+                   ) AS row_num
+            FROM bookings
+            WHERE status = 'confirmed'
+          )
+          DELETE FROM bookings b
+          USING ranked r
+          WHERE b.id = r.id
+            AND r.row_num > 1
+        `);
+
         await ds.query(`
           CREATE UNIQUE INDEX IF NOT EXISTS one_confirmed_per_slot
           ON bookings (slot_id)

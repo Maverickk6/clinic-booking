@@ -8,6 +8,7 @@ import {
   getRetryAfterSeconds,
   hashBody,
   isValidEmail,
+  lockTablesInOrder,
   normalizeEmail,
   normalizeName,
 } from '../../lib/db';
@@ -111,7 +112,14 @@ export async function GET(request) {
     return NextResponse.json({ error: 'invalid limit' }, { status: 400 });
   }
 
-  const dataSource = await getDb();
+  let dataSource;
+  try {
+    dataSource = await getDb();
+  } catch (error) {
+    console.error('Database initialization error while listing bookings:', error);
+    return NextResponse.json({ error: 'database error' }, { status: 500 });
+  }
+
   const repo = dataSource.getRepository(BookingEntity);
   const startIndex = Number.isFinite(cursorValue) && cursorValue > 0 ? cursorValue : 0;
   const [bookings, total] = await repo.findAndCount({
@@ -153,7 +161,14 @@ export async function POST(request) {
   const email = normalized.email;
   const idempotencyKey = request.headers.get('Idempotency-Key');
 
-  const dataSource = await getDb();
+  let dataSource;
+  try {
+    dataSource = await getDb();
+  } catch (error) {
+    console.error('Database initialization error while creating booking:', error);
+    return NextResponse.json({ error: 'database error' }, { status: 500 });
+  }
+
   let response;
 
   try {
@@ -181,6 +196,26 @@ export async function POST(request) {
       const bookingRepo = manager.getRepository(BookingEntity);
       const idempotencyRepo = manager.getRepository(IdempotencyEntity);
 
+      await lockTablesInOrder(manager);
+
+      if (idempotencyKey) {
+        const existingKey = await idempotencyRepo.findOne({ where: { key: idempotencyKey } });
+        if (existingKey) {
+          if (existingKey.bodyHash !== hashBody(normalized)) {
+            response = NextResponse.json({ error: 'idempotency key reused with a different body' }, { status: 422 });
+            return;
+          }
+
+          const original = await bookingRepo.findOneBy({ id: existingKey.bookingId });
+          if (!original) {
+            response = NextResponse.json({ error: 'booking not found' }, { status: 404 });
+            return;
+          }
+          response = NextResponse.json(serializeBooking(original), { status: 201 });
+          return;
+        }
+      }
+
       // Acquire a row lock on the slot to serialize concurrent booking attempts
       const slot = await slotRepo.findOne({
         where: { id: normalized.slot_id },
@@ -191,8 +226,7 @@ export async function POST(request) {
         return;
       }
 
-      // Level 4: Idempotency check BEFORE slot-start and conflict checks so a retry always
-      // returns the original successful booking even if the slot has since started or been booked.
+      // Preserve the post-lock idempotency check so concurrent requests still reject mismatched bodies.
       if (idempotencyKey) {
         const existingKey = await idempotencyRepo.findOne({ where: { key: idempotencyKey } });
         if (existingKey) {

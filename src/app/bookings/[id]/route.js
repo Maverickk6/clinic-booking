@@ -52,7 +52,14 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: 'booking not found' }, { status: 404 });
   }
 
-  const dataSource = await getDb();
+  let dataSource;
+  try {
+    dataSource = await getDb();
+  } catch (error) {
+    console.error(`Database initialization error for booking ${id}:`, error);
+    return NextResponse.json({ error: 'database error' }, { status: 500 });
+  }
+
   let booking;
   try {
     booking = await dataSource.getRepository(BookingEntity).findOneBy({ id });
@@ -84,7 +91,14 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: 'booking not found' }, { status: 404 });
   }
 
-  const dataSource = await getDb();
+  let dataSource;
+  try {
+    dataSource = await getDb();
+  } catch (error) {
+    console.error(`Database initialization error during cancel for booking ${id}:`, error);
+    return NextResponse.json({ error: 'database error' }, { status: 500 });
+  }
+
   const bookingRepo = dataSource.getRepository(BookingEntity);
 
   let booking;

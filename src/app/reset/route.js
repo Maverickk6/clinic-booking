@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { BookingEntity, AttemptEntity, IdempotencyEntity, SlotEntity, getDb, seedDatabase } from '../../lib/db';
+import { BookingEntity, AttemptEntity, IdempotencyEntity, SlotEntity, getDb, lockTablesInOrder, seedDatabase } from '../../lib/db';
 
 /**
  * Handles POST /reset to clear all existing bookings and replace slots.
@@ -35,10 +35,12 @@ export async function POST(request) {
   const slots = payload.slots;
 
   await dataSource.transaction(async (manager) => {
-    // Truncate BookingEntity and SlotEntity together in a single command to satisfy foreign keys
-    await manager.query('TRUNCATE TABLE bookings, slots CASCADE');
+    await lockTablesInOrder(manager);
+
+    await manager.getRepository(BookingEntity).clear();
     await manager.getRepository(IdempotencyEntity).clear();
     await manager.getRepository(AttemptEntity).clear();
+    await manager.getRepository(SlotEntity).clear();
 
     if (slots.length > 0) {
       await manager.getRepository(SlotEntity).insert(
