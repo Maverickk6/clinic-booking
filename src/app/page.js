@@ -6,6 +6,7 @@ const API_KEY = process.env.NEXT_PUBLIC_CLINIC_API_KEY || 'demo-key-123';
 
 function makeSlots() {
   const start = new Date();
+  start.setDate(start.getDate() + 1);
   start.setHours(9, 0, 0, 0);
 
   const slots = [];
@@ -88,10 +89,28 @@ export default function Home() {
   };
 
   useEffect(() => {
+    // Run once on mount — load slots from DB, seed only if DB is empty
     const initialize = async () => {
-      await seedData();
+      try {
+        const data = await apiFetch('/slots');
+        const existing = data.slots || [];
+        if (existing.length === 0) {
+          // DB is empty on first deploy — seed with fresh slots
+          await apiFetch('/reset', {
+            method: 'POST',
+            body: JSON.stringify({ slots: makeSlots() }),
+          });
+          const seeded = await apiFetch('/slots');
+          setSlots(seeded.slots || []);
+        } else {
+          setSlots(existing);
+        }
+      } catch (initError) {
+        setError(initError.message);
+      }
     };
     initialize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (event) => {

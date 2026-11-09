@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
-import { BookingEntity, AttemptEntity, IdempotencyEntity, SlotEntity, getDb } from '../../lib/db';
+import { BookingEntity, AttemptEntity, IdempotencyEntity, SlotEntity, getDb, lockTablesInOrder, seedDatabase } from '../../lib/db';
 
+/**
+ * Handles POST /reset to clear all existing bookings and replace slots.
+ * If slots payload is absent or invalid, seeds default future slots.
+ * If slots is an explicitly provided array (including an empty array), replaces slots accordingly.
+ *
+ * @param {Request} request - The incoming HTTP request.
+ * @returns {Promise<NextResponse>} 200 with result count, 400 invalid payload, or 401 unauthorized.
+ */
 export async function POST(request) {
   const apiKey = request.headers.get('X-API-Key');
   const expectedKey = process.env.CLINIC_API_KEY || 'demo-key-123';
@@ -16,10 +24,19 @@ export async function POST(request) {
     return NextResponse.json({ error: 'invalid payload' }, { status: 400 });
   }
 
-  const slots = Array.isArray(payload?.slots) ? payload.slots : [];
   const dataSource = await getDb();
 
+  // If slots is absent or not an array, seed default slots
+  if (!Array.isArray(payload?.slots)) {
+    const seeded = await seedDatabase({ count: 12, dataSource });
+    return NextResponse.json({ ok: true, count: seeded.length }, { status: 200 });
+  }
+
+  const slots = payload.slots;
+
   await dataSource.transaction(async (manager) => {
+    await lockTablesInOrder(manager);
+
     await manager.getRepository(BookingEntity).clear();
     await manager.getRepository(IdempotencyEntity).clear();
     await manager.getRepository(AttemptEntity).clear();
@@ -37,5 +54,5 @@ export async function POST(request) {
     }
   });
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json({ ok: true, count: slots.length }, { status: 200 });
 }
