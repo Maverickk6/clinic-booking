@@ -67,6 +67,8 @@ export default function Home() {
     return `${available} of ${slots.length} slots open`;
   }, [slots]);
 
+  const selectedSlot = slots.find((slot) => slot.id === form.slot_id) || null;
+
   const loadSlots = async () => {
     try {
       const data = await apiFetch('/slots');
@@ -122,6 +124,11 @@ export default function Home() {
     event.preventDefault();
     setError('');
     setResult(null);
+
+    if (!selectedSlot) {
+      setError('Please select an available appointment slot first.');
+      return;
+    }
 
     try {
       const booking = await apiFetch('/bookings', {
@@ -282,12 +289,12 @@ export default function Home() {
             <h2 className="text-xl font-semibold text-slate-900">New booking</h2>
             <form onSubmit={handleBook} className="mt-5 space-y-4">
               <label className="block text-sm font-medium text-slate-700">
-                Slot ID
+                Selected slot
                 <input
                   name="slot_id"
-                  value={form.slot_id}
-                  onChange={handleChange}
-                  placeholder="s11"
+                  value={selectedSlot ? `${selectedSlot.provider} · ${formatDate(selectedSlot.start)}` : ''}
+                  readOnly
+                  placeholder="Choose an available appointment above"
                   className="mt-1 w-full rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2.5 text-slate-800 outline-none transition focus:border-cyan-500 focus:bg-white"
                   required
                 />
@@ -320,7 +327,8 @@ export default function Home() {
 
               <button
                 type="submit"
-                className="w-full rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 px-4 py-3 font-semibold text-white shadow-lg shadow-cyan-300/40 transition duration-200 hover:-translate-y-0.5 hover:from-cyan-500 hover:to-teal-500"
+                disabled={!selectedSlot}
+                className="w-full rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 px-4 py-3 font-semibold text-white shadow-lg shadow-cyan-300/40 transition duration-200 hover:-translate-y-0.5 hover:from-cyan-500 hover:to-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Book appointment
               </button>
