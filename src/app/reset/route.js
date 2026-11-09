@@ -26,10 +26,11 @@ export async function POST(request) {
   const slots = payload.slots;
 
   await dataSource.transaction(async (manager) => {
-    await manager.getRepository(BookingEntity).clear();
-    await manager.getRepository(IdempotencyEntity).clear();
-    await manager.getRepository(AttemptEntity).clear();
-    await manager.getRepository(SlotEntity).clear();
+    // Use DELETE instead of TRUNCATE to avoid PostgreSQL foreign key truncation constraint errors
+    await manager.query('DELETE FROM bookings');
+    await manager.query('DELETE FROM idempotency_keys');
+    await manager.query('DELETE FROM booking_attempts');
+    await manager.query('DELETE FROM slots');
 
     await manager.getRepository(SlotEntity).insert(
       slots.map((slot) => ({

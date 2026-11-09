@@ -79,6 +79,8 @@ const shouldUseSsl =
 export function createSeedSlots(count = 12) {
   const providers = ['Dr Ade', 'Dr Moyo', 'Dr Smith', 'Dr Okafor'];
   const start = new Date();
+  // Start tomorrow at 9:00 AM to guarantee all seeded slots are in the future
+  start.setDate(start.getDate() + 1);
   start.setHours(9, 0, 0, 0);
 
   return Array.from({ length: count }, (_, index) => {
@@ -102,10 +104,11 @@ export async function seedDatabase({ count = 12, dataSource = null } = {}) {
   const slots = createSeedSlots(count);
 
   await ds.transaction(async (manager) => {
-    await manager.getRepository(BookingEntity).clear();
-    await manager.getRepository(IdempotencyEntity).clear();
-    await manager.getRepository(AttemptEntity).clear();
-    await manager.getRepository(SlotEntity).clear();
+    // Use DELETE instead of TRUNCATE to avoid PostgreSQL foreign key truncation constraint errors
+    await manager.query('DELETE FROM bookings');
+    await manager.query('DELETE FROM idempotency_keys');
+    await manager.query('DELETE FROM booking_attempts');
+    await manager.query('DELETE FROM slots');
 
     await manager.getRepository(SlotEntity).insert(
       slots.map((slot) => ({
@@ -122,15 +125,32 @@ export async function seedDatabase({ count = 12, dataSource = null } = {}) {
 
 let appDataSource = null;
 
+function getCleanDatabaseUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    parsed.searchParams.delete('sslmode');
+    return parsed.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
 export function getDataSource() {
   if (!appDataSource) {
+    // Safely remove sslmode query param so TypeORM's ssl options take precedence
+    const cleanUrl = getCleanDatabaseUrl(databaseUrl);
+    const sslConfig = shouldUseSsl ? { rejectUnauthorized: false } : false;
+
     appDataSource = new DataSource({
       type: 'postgres',
-      url: databaseUrl,
+      url: cleanUrl,
       synchronize: true,
       logging: false,
       entities: [SlotEntity, BookingEntity, IdempotencyEntity, AttemptEntity],
-      ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
+      ssl: sslConfig,
+      extra: {
+        ssl: sslConfig,
+      },
     });
   }
 

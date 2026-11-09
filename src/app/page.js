@@ -6,6 +6,7 @@ const API_KEY = process.env.NEXT_PUBLIC_CLINIC_API_KEY || 'demo-key-123';
 
 function makeSlots() {
   const start = new Date();
+  start.setDate(start.getDate() + 1);
   start.setHours(9, 0, 0, 0);
 
   const slots = [];
