@@ -14,6 +14,12 @@ import {
 
 const publicKey = process.env.CLINIC_API_KEY || 'demo-key-123';
 
+/**
+ * Validates the X-API-Key request header against the configured clinic API key.
+ *
+ * @param {Request} request - The incoming HTTP request.
+ * @returns {NextResponse|null} 401 response if unauthorized, or null if valid.
+ */
 function rejectUnauthorized(request) {
   const apiKey = request.headers.get('X-API-Key');
   if (!apiKey || apiKey !== publicKey) {
@@ -22,6 +28,12 @@ function rejectUnauthorized(request) {
   return null;
 }
 
+/**
+ * Extracts and normalizes booking fields from an incoming request payload.
+ *
+ * @param {Object} body - Parsed JSON request body.
+ * @returns {{ slot_id: string, name: string, email: string }} Normalized booking data.
+ */
 function getNormalizedBody(body) {
   const slotId = typeof body?.slot_id === 'string' ? body.slot_id.trim() : '';
   const name = normalizeName(body?.name);
@@ -30,6 +42,12 @@ function getNormalizedBody(body) {
   return { slot_id: slotId, name, email };
 }
 
+/**
+ * Serializes a booking entity into the standardized API response format.
+ *
+ * @param {Object} booking - The BookingEntity database record.
+ * @returns {Object} Serialized booking object conforming to OpenAPI schema.
+ */
 function serializeBooking(booking) {
   return {
     id: booking.id,
@@ -41,6 +59,13 @@ function serializeBooking(booking) {
   };
 }
 
+/**
+ * Enforces Level 5 rate limiting of at most 5 attempts per email per minute.
+ *
+ * @param {import('typeorm').EntityManager} manager - Transactional entity manager.
+ * @param {string} email - Normalized email address.
+ * @returns {Promise<{ status: number, headers: Object, body: Object }|null>} 429 response info if exceeded, or null.
+ */
 async function validateRateLimit(manager, email) {
   if (!email) return null;
 
@@ -63,6 +88,12 @@ async function validateRateLimit(manager, email) {
   return null;
 }
 
+/**
+ * Handles GET /bookings to list a patient's booking history by email with cursor pagination.
+ *
+ * @param {Request} request - The incoming HTTP request.
+ * @returns {Promise<NextResponse>} 200 with paginated bookings, 400 on invalid input, or 401 unauthorized.
+ */
 export async function GET(request) {
   const denied = rejectUnauthorized(request);
   if (denied) return denied;
@@ -100,6 +131,13 @@ export async function GET(request) {
   );
 }
 
+/**
+ * Handles POST /bookings to create an appointment booking.
+ * Supports idempotency, concurrency locking, and rate limiting across Levels 1-5.
+ *
+ * @param {Request} request - The incoming HTTP request.
+ * @returns {Promise<NextResponse>} 201 on success, 400 invalid details, 404 not found, 409 conflict, 422 mismatch, or 429 rate limited.
+ */
 export async function POST(request) {
   const denied = rejectUnauthorized(request);
   if (denied) return denied;
@@ -153,14 +191,8 @@ export async function POST(request) {
         return;
       }
 
-      const slotStart = new Date(slot.start).getTime();
-      if (slotStart <= Date.now()) {
-        response = NextResponse.json({ error: 'slot has already started' }, { status: 400 });
-        return;
-      }
-
-      // Level 4: Idempotency check BEFORE conflict check so a retry always
-      // gets back the original booking regardless of current slot state.
+      // Level 4: Idempotency check BEFORE slot-start and conflict checks so a retry always
+      // returns the original successful booking even if the slot has since started or been booked.
       if (idempotencyKey) {
         const existingKey = await idempotencyRepo.findOne({ where: { key: idempotencyKey } });
         if (existingKey) {
@@ -171,13 +203,18 @@ export async function POST(request) {
 
           const original = await bookingRepo.findOneBy({ id: existingKey.bookingId });
           if (!original) {
-            // Idempotency record exists but booking was removed — treat as conflict
             response = NextResponse.json({ error: 'booking not found' }, { status: 404 });
             return;
           }
           response = NextResponse.json(serializeBooking(original), { status: 201 });
           return;
         }
+      }
+
+      const slotStart = new Date(slot.start).getTime();
+      if (slotStart <= Date.now()) {
+        response = NextResponse.json({ error: 'slot has already started' }, { status: 400 });
+        return;
       }
 
       const existingConfirmed = await bookingRepo.count({
@@ -209,11 +246,33 @@ export async function POST(request) {
       response = NextResponse.json(serializeBooking(created), { status: 201 });
     });
   } catch (error) {
+    // Separate idempotency-key conflicts from slot uniqueness conflicts
+    if (idempotencyKey && error?.code === '23505') {
+      try {
+        const idempotencyRepo = dataSource.getRepository(IdempotencyEntity);
+        const bookingRepo = dataSource.getRepository(BookingEntity);
+        const existingKey = await idempotencyRepo.findOne({ where: { key: idempotencyKey } });
+        if (existingKey) {
+          if (existingKey.bodyHash !== hashBody(normalized)) {
+            return NextResponse.json({ error: 'idempotency key reused with a different body' }, { status: 422 });
+          }
+          const original = await bookingRepo.findOneBy({ id: existingKey.bookingId });
+          if (original) {
+            return NextResponse.json(serializeBooking(original), { status: 201 });
+          }
+        }
+      } catch (idempErr) {
+        console.error('Error resolving concurrent idempotency collision:', idempErr);
+      }
+    }
+
     // If a database-level unique constraint on slot is violated during race conditions
     if (error?.code === '23505' || /duplicate key|unique constraint|one_confirmed_per_slot/i.test(error?.message || '')) {
       return NextResponse.json({ error: 'slot already booked' }, { status: 409 });
     }
-    return NextResponse.json({ error: error?.message || 'unexpected error' }, { status: 500 });
+
+    console.error('Booking transaction failed:', error?.stack || error);
+    return NextResponse.json({ error: 'unexpected error' }, { status: 500 });
   }
 
   return response || NextResponse.json({ error: 'unexpected error' }, { status: 500 });
