@@ -43,10 +43,16 @@ async function apiFetch(path, options = {}) {
   };
 
   const response = await fetch(path, { ...options, headers });
-  const data = await response.json().catch(() => ({}));
+  let data = {};
+
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || 'Request failed');
+    throw new Error(data.error || response.statusText || 'Request failed');
   }
 
   return data;
