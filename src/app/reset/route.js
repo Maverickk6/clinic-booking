@@ -24,31 +24,46 @@ export async function POST(request) {
     payload = {};
   }
 
-  const dataSource = await getDb();
-
-  // Missing or malformed payloads seed defaults; an explicit empty array is treated as a full reset.
-  if (!payload || typeof payload !== 'object' || !Array.isArray(payload.slots)) {
-    const seeded = await seedDatabase({ count: 12, dataSource });
-    return NextResponse.json({ ok: true, count: seeded.length }, { status: 200 });
+  let dataSource;
+  try {
+    dataSource = await getDb();
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Database unavailable', details: error.message },
+      { status: 500 }
+    );
   }
 
-  const slots = payload.slots;
-
-  await dataSource.transaction(async (manager) => {
-    await lockTablesInOrder(manager);
-    await manager.query('TRUNCATE TABLE bookings, idempotency_keys, booking_attempts, slots CASCADE');
-
-    if (slots.length > 0) {
-      await manager.getRepository(SlotEntity).insert(
-        slots.map((slot) => ({
-          id: String(slot.id || ''),
-          provider: String(slot.provider || ''),
-          start: new Date(slot.start),
-          end: new Date(slot.end),
-        }))
-      );
+  try {
+    // Missing or malformed payloads seed defaults; an explicit empty array is treated as a full reset.
+    if (!payload || typeof payload !== 'object' || !Array.isArray(payload.slots)) {
+      const seeded = await seedDatabase({ count: 12, dataSource });
+      return NextResponse.json({ ok: true, count: seeded.length }, { status: 200 });
     }
-  });
 
-  return NextResponse.json({ ok: true, count: slots.length }, { status: 200 });
+    const slots = payload.slots;
+
+    await dataSource.transaction(async (manager) => {
+      await lockTablesInOrder(manager);
+      await manager.query('TRUNCATE TABLE bookings, idempotency_keys, booking_attempts, slots CASCADE');
+
+      if (slots.length > 0) {
+        await manager.getRepository(SlotEntity).insert(
+          slots.map((slot) => ({
+            id: String(slot.id || ''),
+            provider: String(slot.provider || ''),
+            start: new Date(slot.start),
+            end: new Date(slot.end),
+          }))
+        );
+      }
+    });
+
+    return NextResponse.json({ ok: true, count: slots.length }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to reset slots', details: error.message },
+      { status: 500 }
+    );
+  }
 }
