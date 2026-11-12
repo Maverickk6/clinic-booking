@@ -18,20 +18,22 @@ export async function POST(request) {
   }
 
   let payload = {};
-  try {
-    payload = (await request.json()) || {};
-  } catch {
-    payload = {};
+  const rawBody = await request.text();
+
+  if (rawBody.trim() !== '') {
+    try {
+      payload = JSON.parse(rawBody) || {};
+    } catch {
+      return NextResponse.json({ error: 'invalid payload' }, { status: 400 });
+    }
   }
 
   let dataSource;
   try {
     dataSource = await getDb();
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Database unavailable', details: error.message },
-      { status: 500 }
-    );
+    console.error('Database acquisition failed during reset:', error);
+    return NextResponse.json({ error: 'Database unavailable' }, { status: 500 });
   }
 
   try {
@@ -61,9 +63,7 @@ export async function POST(request) {
 
     return NextResponse.json({ ok: true, count: slots.length }, { status: 200 });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to reset slots', details: error.message },
-      { status: 500 }
-    );
+    console.error('Reset operation failed:', error);
+    return NextResponse.json({ error: 'Failed to reset slots' }, { status: 500 });
   }
 }
